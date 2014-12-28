@@ -3,26 +3,28 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 )
 
-var InfoLog *log.Logger
+var InfoLog = log.New(ioutil.Discard, "", log.LstdFlags)
 
 var (
-	verbose   = flag.Bool("v", True, "Print verbose messages about what is happening.")
+	verbose   = flag.Bool("v", true, "Print verbose messages about what is happening.")
 	pkgsrcdir = flag.String("pkgsrc", "", "Path to the top-level pkgsrc directory, will be taken from the PKGSRCDIR environment variable if not given.")
 )
 
 func main() {
-	if flag.NArg() == 0 {
-		Err("Need at least one argument")
+	if *verbose {
+		InfoLog = log.New(os.Stderr, "", log.LstdFlags)
 	}
-	for pkgpath := range flag.Arg() {
+	if flag.NArg() == 0 {
+		log.Fatal("Need at least one argument")
+	}
+	for _, pkgpath := range flag.Args() {
 		if err := HandleURL(pkgpath); err != nil {
-			Err(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 	}
 }
