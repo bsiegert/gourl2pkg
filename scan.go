@@ -64,7 +64,7 @@ func scanSingle(basedir, filename string) (string, *Pkg, error) {
 		}
 	}
 	p := Pkg{}
-	p.Path, err = filepath.Rel(basedir, filepath.Base(filename))
+	p.Path, err = filepath.Rel(basedir, filepath.Dir(filename))
 	if err != nil {
 		return "", nil, err
 	}
@@ -84,14 +84,14 @@ func scanSingle(basedir, filename string) (string, *Pkg, error) {
 func extractVar(contents []byte, varname []byte) string {
 	n := bytes.LastIndex(contents, varname)
 	// There should be whitespace before varname, and a '=' after.
-	if r, _ := utf8.DecodeLastRune(contents[:n]); !unicode.IsSpace(r) {
+	if r, _ := utf8.DecodeLastRune(contents[:n]); n > 0 && !unicode.IsSpace(r) {
 		return ""
 	}
 	contents = contents[n+len(varname):]
 	if contents[0] != '=' {
 		return ""
 	}
-	contents = bytes.TrimSpace(bytes.SplitN(contents, []byte("\n"), 2)[0])
+	contents = bytes.TrimSpace(bytes.SplitN(contents[1:], []byte("\n"), 2)[0])
 	// If it contains a $ sign, then it is not a simple string.
 	if bytes.IndexByte(contents, '$') != -1 {
 		return ""

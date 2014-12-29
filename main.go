@@ -16,10 +16,19 @@ var (
 	pkgsrcdir = flag.String("pkgsrc", "", "Path to the top-level pkgsrc directory, will be taken from the PKGSRCDIR environment variable if not given.")
 )
 
-func main() {
+func init() {
 	if *verbose {
 		InfoLog = log.New(os.Stderr, "", log.LstdFlags)
 	}
+	if *pkgsrcdir == "" {
+		*pkgsrcdir = os.Getenv("PKGSRC")
+	}
+	if *pkgsrcdir == "" {
+		*pkgsrcdir = "/usr/pkgsrc"
+	}
+}
+
+func main() {
 	/*if flag.NArg() == 0 {
 		log.Fatal("Need at least one argument")
 	}
