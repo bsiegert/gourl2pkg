@@ -3,6 +3,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -19,14 +20,19 @@ func main() {
 	if *verbose {
 		InfoLog = log.New(os.Stderr, "", log.LstdFlags)
 	}
-	if flag.NArg() == 0 {
+	/*if flag.NArg() == 0 {
 		log.Fatal("Need at least one argument")
 	}
 	for _, pkgpath := range flag.Args() {
 		if err := HandleURL(pkgpath); err != nil {
 			log.Fatal(err)
 		}
+	}*/
+	r, err := FullScan(*pkgsrcdir)
+	if err != nil {
+		log.Fatal(err)
 	}
+	fmt.Println(r)
 }
 
 func HandleURL(pkgpath string) error {
