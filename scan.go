@@ -22,6 +22,10 @@ type Pkg struct {
 	Name string
 }
 
+func (p *Pkg) String() string {
+	return fmt.Sprintf("%s-*:../../%s", p.Name, p.Path)
+}
+
 // ReverseIndex maps Go importpaths to packages in pkgsrc.
 type ReverseIndex map[string]*Pkg
 
@@ -83,6 +87,9 @@ func scanSingle(basedir, filename string) (string, *Pkg, error) {
 // the empty string if the extraction failed.
 func extractVar(contents []byte, varname []byte) string {
 	n := bytes.LastIndex(contents, varname)
+	if n < 0 {
+		return ""
+	}
 	// There should be whitespace before varname, and a '=' after.
 	if r, _ := utf8.DecodeLastRune(contents[:n]); n > 0 && !unicode.IsSpace(r) {
 		return ""
@@ -102,7 +109,7 @@ func extractVar(contents []byte, varname []byte) string {
 // extractVarMake runs bmake on the Makefile to extract the variable name.
 func extractVarMake(filename string, varname string) (string, error) {
 	cmd := exec.Command("bmake", "show-var", "VARNAME="+varname)
-	cmd.Dir = filepath.Base(filename)
+	cmd.Dir = filepath.Dir(filename)
 	output, err := cmd.Output()
 	if err != nil {
 		return "", err

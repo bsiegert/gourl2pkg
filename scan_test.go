@@ -10,6 +10,21 @@ var extractVarTests = []struct {
 		"GO_SRCPATH",
 		"github.com/foo/bar",
 	},
+	{
+		"#GO_SRCPATH=	github.com/foo/bar",
+		"GO_SRCPATH",
+		"",
+	},
+	{
+		"foo\nGO_SRCPATH=	github.com/foo/bar\n\nbaz",
+		"GO_SRCPATH",
+		"github.com/foo/bar",
+	},
+	{
+		"testing123",
+		"GO_SRCPATH",
+		"",
+	},
 }
 
 func TestExtractVar(t *testing.T) {
