@@ -28,12 +28,10 @@ var makeProg = func() string {
 type Pkg struct {
 	// PkgPath is the path to the package (e.g. "lang/go").
 	Path string
-	// Name is the package name, without the version (e.g. "go").
-	Name string
 }
 
 func (p *Pkg) String() string {
-	return fmt.Sprintf("%s-*:../../%s", p.Name, p.Path)
+	return p.Path
 }
 
 // ReverseIndex maps Go importpaths to packages in pkgsrc.
@@ -96,13 +94,6 @@ func scanSingle(basedir, filename string) (string, *Pkg, error) {
 	p.Path, err = filepath.Rel(basedir, filepath.Dir(filename))
 	if err != nil {
 		return "", nil, err
-	}
-	p.Name = extractVar(contents, []byte("PKGNAME"))
-	if p.Name == "" {
-		p.Name, err = extractVarMake(filename, "PKGNAME")
-		if err != nil {
-			return "", nil, fmt.Errorf("getting PKGNAME: %v", err)
-		}
 	}
 	return importpath, &p, nil
 }
