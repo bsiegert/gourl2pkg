@@ -3,9 +3,12 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
+	"sort"
+	"text/tabwriter"
 	"unicode"
 	"unicode/utf8"
 )
@@ -13,6 +16,13 @@ import (
 // This file contains code for scanning pkgsrc Makefiles and building a reverse
 // index of packages and the Go importpaths they represent.
 // TODO(bsiegert) eventually make this a separate package.
+
+var makeProg = func() string {
+	if _, err := exec.LookPath("bmake"); err == nil {
+		return "bmake"
+	}
+	return "make"
+}()
 
 // Pkg is metadata about a package in pkgsrc.
 type Pkg struct {
@@ -29,7 +39,22 @@ func (p *Pkg) String() string {
 // ReverseIndex maps Go importpaths to packages in pkgsrc.
 type ReverseIndex map[string]*Pkg
 
-// FullScan rebuilds the entire index by scanning all files in
+// WriteTo prints the reverse index to w.
+func (r ReverseIndex) WriteTo(w io.Writer) error {
+	var list []string
+	for path, pkg := range r {
+		list = append(list, fmt.Sprintf("%s\t%s\n", path, pkg))
+	}
+	sort.Strings(list)
+
+	tw := tabwriter.NewWriter(w, 2, 1, 1, ' ', 0)
+	for _, line := range list {
+		tw.Write([]byte(line))
+	}
+	return tw.Flush()
+}
+
+// FullScan rebuilds the entire index by scanning all files in the pkgsrc dir.
 func FullScan(basedir string) (ReverseIndex, error) {
 	makefiles, err := filepath.Glob(filepath.Join(basedir, "*", "*", "Makefile"))
 	if err != nil {
@@ -108,7 +133,7 @@ func extractVar(contents []byte, varname []byte) string {
 
 // extractVarMake runs bmake on the Makefile to extract the variable name.
 func extractVarMake(filename string, varname string) (string, error) {
-	cmd := exec.Command("bmake", "show-var", "VARNAME="+varname)
+	cmd := exec.Command(makeProg, "show-var", "VARNAME="+varname)
 	cmd.Dir = filepath.Dir(filename)
 	output, err := cmd.Output()
 	if err != nil {

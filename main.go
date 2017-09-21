@@ -3,7 +3,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -41,7 +40,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(r)
+	r.WriteTo(os.Stdout)
 }
 
 func HandleURL(pkgpath string) error {
