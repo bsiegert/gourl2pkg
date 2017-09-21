@@ -43,8 +43,13 @@ func main() {
 		revIndex.WriteTo(os.Stdout)
 		return
 	}
-	for _, goSrcPath := range flag.Args() {
-		if err := HandleURL(revIndex, goSrcPath); err != nil {
+
+	ToPackage := flag.Args()
+	for len(ToPackage) > 0 {
+		InfoLog.Printf("Remaining to package: %s", ToPackage)
+		p := ToPackage[0]
+		ToPackage = ToPackage[1:]
+		if err := HandleURL(revIndex, p); err != nil {
 			log.Fatal(err)
 		}
 	}
