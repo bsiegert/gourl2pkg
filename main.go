@@ -50,9 +50,19 @@ func main() {
 	}
 	defer os.RemoveAll(tmpdir)
 	InfoLog.Printf("Initial code download (%s)", tmpdir)
-	ToPackage, err := GoGet(flag.Args(), tmpdir)
-	if err != nil {
-		log.Fatal(err)
+	var ToPackage []string
+	result := flag.Args()
+	// Run go get n times until there are no new repos.
+	for i := 1; ; i++ {
+		InfoLog.Printf("Run %d", i)
+		result, err = GoGet(result, tmpdir)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if len(result) == 0 {
+			break
+		}
+		ToPackage = append(ToPackage, result...)
 	}
 
 	for len(ToPackage) > 0 {
