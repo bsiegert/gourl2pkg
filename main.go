@@ -45,6 +45,15 @@ func main() {
 	}
 
 	ToPackage := flag.Args()
+
+	tmpdir, err := ioutil.TempDir("", "gourl2pkg")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.RemoveAll(tmpdir)
+	InfoLog.Printf("Initial code download (%s)", tmpdir)
+	GoGet(ToPackage, tmpdir)
+
 	for len(ToPackage) > 0 {
 		InfoLog.Printf("Remaining to package: %s", ToPackage)
 		p := ToPackage[0]
