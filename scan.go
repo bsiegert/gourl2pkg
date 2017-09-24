@@ -38,6 +38,9 @@ func (p *Pkg) String() string {
 // ReverseIndex maps Go importpaths to packages in pkgsrc.
 type ReverseIndex map[string]*Pkg
 
+// The ReverseIndex Singleton.
+var revIndex ReverseIndex
+
 // WriteTo prints the reverse index to w.
 func (r ReverseIndex) WriteTo(w io.Writer) error {
 	var list []string
@@ -55,7 +58,8 @@ func (r ReverseIndex) WriteTo(w io.Writer) error {
 
 // PrefixMatch returns a prefix match of m in r and whether there was a match.
 func (r ReverseIndex) PrefixMatch(m string) (string, bool) {
-	// Not a simple map lookup because of prefix matches
+	// Not a simple map lookup because of prefix matches.
+	// TODO(bsiegert) return longest
 	for src, pkg := range r {
 		if strings.HasPrefix(m, src) {
 			return pkg.Path, true

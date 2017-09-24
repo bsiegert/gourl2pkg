@@ -33,3 +33,21 @@ func GoGet(srcpaths []string, dir string) ([]string, error) {
 	}
 	return repos, nil
 }
+
+// GoGetResolve runs go get n times until there are no new repos.
+func GoGetResolve(srcpaths []string, dir string) ([]string, error) {
+	var ToPackage []string
+	var err error
+	for i := 1; ; i++ {
+		InfoLog.Printf("Run %d", i)
+		srcpaths, err = GoGet(srcpaths, dir)
+		if err != nil {
+			return nil, err
+		}
+		if len(srcpaths) == 0 {
+			break
+		}
+		ToPackage = append(ToPackage, srcpaths...)
+	}
+	return ToPackage, nil
+}

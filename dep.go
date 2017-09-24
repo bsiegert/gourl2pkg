@@ -42,8 +42,11 @@ func stdLibPackages() map[string]struct{} {
 
 // ShowImportsRecursive prints dependencies for srcpath and every one of
 // its subdirectories.
-func ShowImportsRecursive(srcpath string) error {
+func ShowImportsRecursive(gopath, srcpath string) error {
 	ctx := build.Default
+	if gopath != "" {
+		ctx.GOPATH = gopath
+	}
 	basedir := filepath.Join(filepath.SplitList(ctx.GOPATH)[0], "src")
 	depends := make(map[string]struct{})
 	testDepends := make(map[string]struct{})
@@ -66,14 +69,11 @@ func ShowImportsRecursive(srcpath string) error {
 		if err != nil {
 			return err
 		}
-		pkg, err := ctx.Import(relpath, "", 0)
-		if err != nil {
-			log.Println(err)
-		}
+		pkg, _ := ctx.Import(relpath, "", 0)
 		for _, d := range pkg.Imports {
 			// Self-dependencies don't count;
 			if strings.HasPrefix(d, srcpath) {
-				log.Printf("Self-dependency %s -> %s", relpath, d)
+				// log.Printf("Self-dependency %s -> %s", relpath, d)
 				continue
 			}
 			if _, ok := stdLib[d]; ok {
@@ -83,7 +83,7 @@ func ShowImportsRecursive(srcpath string) error {
 		}
 		for _, d := range pkg.TestImports {
 			if strings.HasPrefix(d, srcpath) {
-				log.Printf("Self test dependency %s -> %s", relpath, d)
+				// log.Printf("Self test dependency %s -> %s", relpath, d)
 				continue
 			}
 			if _, ok := stdLib[d]; ok {
@@ -108,8 +108,10 @@ func ShowImportsRecursive(srcpath string) error {
 
 func printImports(imports map[string]struct{}) {
 	for imp := range imports {
-		if _, ok := stdLib[imp]; !ok {
-			fmt.Printf(" - %s\n", imp)
+		pkg, ok := revIndex.PrefixMatch(imp)
+		if !ok {
+			pkg = imp + " (UNRESOLVED)"
 		}
+		fmt.Println(pkg)
 	}
 }

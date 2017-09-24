@@ -14,6 +14,7 @@ var (
 	index     = flag.Bool("index", false, "Print the reverse index of Go packages instead of adding any ports.")
 	verbose   = flag.Bool("v", true, "Print verbose messages about what is happening.")
 	pkgsrcdir = flag.String("pkgsrc", "", "Path to the top-level pkgsrc directory, will be taken from the PKGSRCDIR environment variable if not given.")
+	local     = flag.Bool("local", false, "Use local GOPATH (mainly useful for testing)")
 )
 
 func init() {
@@ -34,7 +35,8 @@ func main() {
 		log.Fatal("Need at least one argument")
 	}
 
-	revIndex, err := FullScan(*pkgsrcdir)
+	var err error
+	revIndex, err = FullScan(*pkgsrcdir)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -43,25 +45,23 @@ func main() {
 		return
 	}
 
-	tmpdir, err := ioutil.TempDir("", "gourl2pkg")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer os.RemoveAll(tmpdir)
-	InfoLog.Printf("Initial code download (%s)", tmpdir)
-	var ToPackage []string
-	result := flag.Args()
-	// Run go get n times until there are no new repos.
-	for i := 1; ; i++ {
-		InfoLog.Printf("Run %d", i)
-		result, err = GoGet(result, tmpdir)
+	var (
+		ToPackage []string
+		tmpdir    string
+	)
+	if !*local {
+		tmpdir, err := ioutil.TempDir("", "gourl2pkg")
 		if err != nil {
 			log.Fatal(err)
 		}
-		if len(result) == 0 {
-			break
+		defer os.RemoveAll(tmpdir)
+		InfoLog.Printf("Initial code download (%s)", tmpdir)
+		ToPackage, err = GoGetResolve(flag.Args(), tmpdir)
+		if err != nil {
+			log.Fatal(err)
 		}
-		ToPackage = append(ToPackage, result...)
+	} else {
+		ToPackage = flag.Args()
 	}
 
 	for len(ToPackage) > 0 {
@@ -69,17 +69,17 @@ func main() {
 		l := len(ToPackage) - 1
 		p := ToPackage[l]
 		ToPackage = ToPackage[:l]
-		if err := HandleURL(revIndex, p); err != nil {
+		if err := HandleURL(tmpdir, p); err != nil {
 			log.Fatal(err)
 		}
 	}
 }
 
-func HandleURL(r ReverseIndex, srcpath string) error {
-	if pkg, ok := r.PrefixMatch(srcpath); ok {
+func HandleURL(basedir string, srcpath string) error {
+	if pkg, ok := revIndex.PrefixMatch(srcpath); ok {
 		log.Printf("%s is already part of a pkgsrc package (%s)", srcpath, pkg)
 		return nil
 	}
-	ShowImportsRecursive(srcpath)
+	ShowImportsRecursive(basedir, srcpath)
 	return nil
 }
