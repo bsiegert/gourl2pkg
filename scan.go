@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strings"
 	"text/tabwriter"
 	"unicode"
 	"unicode/utf8"
@@ -50,6 +51,17 @@ func (r ReverseIndex) WriteTo(w io.Writer) error {
 		tw.Write([]byte(line))
 	}
 	return tw.Flush()
+}
+
+// PrefixMatch returns a prefix match of m in r and whether there was a match.
+func (r ReverseIndex) PrefixMatch(m string) (string, bool) {
+	// Not a simple map lookup because of prefix matches
+	for src, pkg := range r {
+		if strings.HasPrefix(m, src) {
+			return pkg.Path, true
+		}
+	}
+	return "", false
 }
 
 // FullScan rebuilds the entire index by scanning all files in the pkgsrc dir.

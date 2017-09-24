@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"strings"
 )
 
 var InfoLog = log.New(ioutil.Discard, "", log.LstdFlags)
@@ -67,8 +66,9 @@ func main() {
 
 	for len(ToPackage) > 0 {
 		InfoLog.Printf("Remaining to package: %s", ToPackage)
-		p := ToPackage[0]
-		ToPackage = ToPackage[1:]
+		l := len(ToPackage) - 1
+		p := ToPackage[l]
+		ToPackage = ToPackage[:l]
 		if err := HandleURL(revIndex, p); err != nil {
 			log.Fatal(err)
 		}
@@ -76,12 +76,9 @@ func main() {
 }
 
 func HandleURL(r ReverseIndex, srcpath string) error {
-	// Not a simple map lookup because of prefix matches
-	for src, pkg := range r {
-		if strings.HasPrefix(srcpath, src) {
-			log.Printf("%s is already part of a pkgsrc package (%s)", srcpath, pkg.Path)
-			return nil
-		}
+	if pkg, ok := r.PrefixMatch(srcpath); ok {
+		log.Printf("%s is already part of a pkgsrc package (%s)", srcpath, pkg)
+		return nil
 	}
 	log.Printf("This is where we would package %s", srcpath)
 	return nil
