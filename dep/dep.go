@@ -55,7 +55,10 @@ func stdLibPackages() map[string]struct{} {
 func ShowImportsRecursive(srcpath string) error {
 	ctx := build.Default
 	basedir := filepath.Join(filepath.SplitList(ctx.GOPATH)[0], "src")
-	return filepath.Walk(filepath.Join(basedir, srcpath), func(path string, info os.FileInfo, err error) error {
+	depends := make(map[string]struct{})
+	testDepends := make(map[string]struct{})
+
+	err := filepath.Walk(filepath.Join(basedir, srcpath), func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -69,30 +72,52 @@ func ShowImportsRecursive(srcpath string) error {
 		// TODO(bsiegert) what should be the behavior for "vendor"
 		// and "internal" trees be?
 
-		srcpath, err := filepath.Rel(basedir, path)
+		relpath, err := filepath.Rel(basedir, path)
 		if err != nil {
 			return err
 		}
-		return ShowImports(srcpath)
+		pkg, err := ctx.Import(relpath, "", 0)
+		if err != nil {
+			log.Println(err)
+		}
+		for _, d := range pkg.Imports {
+			// Self-dependencies don't count;
+			if strings.HasPrefix(d, srcpath) {
+				log.Printf("Self-dependency %s -> %s", relpath, d)
+				continue
+			}
+			if _, ok := stdLib[d]; ok {
+				continue
+			}
+			depends[d] = struct{}{}
+		}
+		for _, d := range pkg.TestImports {
+			if strings.HasPrefix(d, srcpath) {
+				log.Printf("Self test dependency %s -> %s", relpath, d)
+				continue
+			}
+			if _, ok := stdLib[d]; ok {
+				continue
+			}
+			if _, ok := depends[d]; ok {
+				continue
+			}
+			testDepends[d] = struct{}{}
+		}
+		return nil
 	})
-}
-
-func ShowImports(srcpath string) error {
-	ctx := build.Default
-	// TODO set GOPATH
-	pkg, err := ctx.Import(srcpath, "", 0)
 	if err != nil {
-		log.Println(err)
+		return err
 	}
-	fmt.Printf("Imports of %s:\n", srcpath)
-	printImports(pkg.Imports)
-	fmt.Printf("Test imports of %s:\n", srcpath)
-	printImports(pkg.TestImports)
+	fmt.Printf("Depends of %s:\n", srcpath)
+	printImports(depends)
+	fmt.Println("Extra Test Depends:")
+	printImports(testDepends)
 	return nil
 }
 
-func printImports(imports []string) {
-	for _, imp := range imports {
+func printImports(imports map[string]struct{}) {
+	for imp := range imports {
 		if _, ok := stdLib[imp]; !ok {
 			fmt.Printf(" - %s\n", imp)
 		}
