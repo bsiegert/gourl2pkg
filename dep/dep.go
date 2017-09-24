@@ -63,10 +63,8 @@ func ShowImports(srcpath string) error {
 
 func printImports(imports []string) {
 	for _, imp := range imports {
-		std := ""
-		if _, ok := stdLib[imp]; ok {
-			std = " (std lib)"
+		if _, ok := stdLib[imp]; !ok {
+			fmt.Printf(" - %s\n", imp)
 		}
-		fmt.Printf(" - %s%s\n", imp, std)
 	}
 }
