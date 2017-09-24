@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"go/build"
 	"log"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 )
 
 var stdLib = stdLibPackages()
@@ -14,7 +17,7 @@ var stdLib = stdLibPackages()
 func main() {
 	flag.Parse()
 	for _, a := range flag.Args() {
-		if err := ShowImports(a); err != nil {
+		if err := ShowImportsRecursive(a); err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -47,16 +50,43 @@ func stdLibPackages() map[string]struct{} {
 	return pkgs
 }
 
+// ShowImportsRecursive prints dependencies for srcpath and every one of
+// its subdirectories.
+func ShowImportsRecursive(srcpath string) error {
+	ctx := build.Default
+	basedir := filepath.Join(filepath.SplitList(ctx.GOPATH)[0], "src")
+	return filepath.Walk(filepath.Join(basedir, srcpath), func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			return nil
+		}
+		base := filepath.Base(path)
+		if strings.HasPrefix(base, ".") || base == "testdata" {
+			return filepath.SkipDir
+		}
+		// TODO(bsiegert) what should be the behavior for "vendor"
+		// and "internal" trees be?
+
+		srcpath, err := filepath.Rel(basedir, path)
+		if err != nil {
+			return err
+		}
+		return ShowImports(srcpath)
+	})
+}
+
 func ShowImports(srcpath string) error {
 	ctx := build.Default
 	// TODO set GOPATH
 	pkg, err := ctx.Import(srcpath, "", 0)
 	if err != nil {
-		return err
+		log.Println(err)
 	}
-	fmt.Println("Imports:")
+	fmt.Printf("Imports of %s:\n", srcpath)
 	printImports(pkg.Imports)
-	fmt.Println("Test imports:")
+	fmt.Printf("Test imports of %s:\n", srcpath)
 	printImports(pkg.TestImports)
 	return nil
 }
