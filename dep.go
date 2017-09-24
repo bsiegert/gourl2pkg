@@ -72,21 +72,13 @@ func ShowImportsRecursive(gopath, srcpath string) error {
 		pkg, _ := ctx.Import(relpath, "", 0)
 		for _, d := range pkg.Imports {
 			// Self-dependencies don't count;
-			if strings.HasPrefix(d, srcpath) {
-				// log.Printf("Self-dependency %s -> %s", relpath, d)
-				continue
-			}
-			if _, ok := stdLib[d]; ok {
+			if skipImport(d, srcpath) {
 				continue
 			}
 			depends[d] = struct{}{}
 		}
 		for _, d := range pkg.TestImports {
-			if strings.HasPrefix(d, srcpath) {
-				// log.Printf("Self test dependency %s -> %s", relpath, d)
-				continue
-			}
-			if _, ok := stdLib[d]; ok {
+			if skipImport(d, srcpath) {
 				continue
 			}
 			if _, ok := depends[d]; ok {
@@ -106,12 +98,28 @@ func ShowImportsRecursive(gopath, srcpath string) error {
 	return nil
 }
 
+func skipImport(dep, srcpath string) bool {
+	if strings.HasPrefix(dep, srcpath) {
+		// log.Printf("Self test dependency %s -> %s", relpath, d)
+		return true
+	}
+	if _, ok := stdLib[dep]; ok {
+		return true
+	}
+	return dep == "C"
+}
+
 func printImports(imports map[string]struct{}) {
+	pkgs := make(map[string]struct{})
 	for imp := range imports {
 		pkg, ok := revIndex.PrefixMatch(imp)
 		if !ok {
-			pkg = imp + " (UNRESOLVED)"
+			fmt.Printf("%s (UNRESOLVED)\n", imp)
+			continue
 		}
+		pkgs[pkg] = struct{}{}
+	}
+	for pkg := range pkgs {
 		fmt.Println(pkg)
 	}
 }
