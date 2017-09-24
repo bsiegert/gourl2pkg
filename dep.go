@@ -1,35 +1,115 @@
 package main
 
 import (
-	"bytes"
+	"bufio"
 	"fmt"
+	"go/build"
+	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 )
 
-var _ = fmt.Printf
+var stdLib = stdLibPackages()
 
-// GoGet calls "go get" to download all the srcpaths. dir is the base directory
-// of the gopath. It returns a list of downloaded repos and an error, if any.
-func GoGet(srcpaths []string, dir string) ([]string, error) {
-	args := []string{"get", "-v"}
-	for _, s := range srcpaths {
-		args = append(args, s+"/...")
-	}
-	cmd := exec.Command("go", args...)
-	cmd.Env = append(os.Environ(), "GOPATH="+dir)
-	output, err := cmd.CombinedOutput()
+// stdlibPackages returns the set of packages in the standard Go library.
+// The expansion of "std" is done inside the go tool, so shell out.
+func stdLibPackages() map[string]struct{} {
+	pkgs := make(map[string]struct{})
+	cmd := exec.Command("go", "list", "std")
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, err
+		log.Fatal(err)
+	}
+	if err := cmd.Start(); err != nil {
+		log.Fatal(err)
 	}
 
-	// Read through the output to find download lines.
-	var repos []string
-	for _, line := range bytes.Split(output, []byte{'\n'}) {
-		//fmt.Printf("%s\n", line)
-		if n := bytes.Index(line, []byte(" (download)")); n != -1 {
-			repos = append(repos, string(line[:n]))
+	s := bufio.NewScanner(stdout)
+	for s.Scan() {
+		pkgs[s.Text()] = struct{}{}
+	}
+	if err := s.Err(); err != nil {
+		log.Fatal(err)
+	}
+	if err := cmd.Wait(); err != nil {
+		log.Fatal(err)
+	}
+
+	return pkgs
+}
+
+// ShowImportsRecursive prints dependencies for srcpath and every one of
+// its subdirectories.
+func ShowImportsRecursive(srcpath string) error {
+	ctx := build.Default
+	basedir := filepath.Join(filepath.SplitList(ctx.GOPATH)[0], "src")
+	depends := make(map[string]struct{})
+	testDepends := make(map[string]struct{})
+
+	err := filepath.Walk(filepath.Join(basedir, srcpath), func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			return nil
+		}
+		base := filepath.Base(path)
+		if strings.HasPrefix(base, ".") || base == "testdata" {
+			return filepath.SkipDir
+		}
+		// TODO(bsiegert) what should be the behavior for "vendor"
+		// and "internal" trees be?
+
+		relpath, err := filepath.Rel(basedir, path)
+		if err != nil {
+			return err
+		}
+		pkg, err := ctx.Import(relpath, "", 0)
+		if err != nil {
+			log.Println(err)
+		}
+		for _, d := range pkg.Imports {
+			// Self-dependencies don't count;
+			if strings.HasPrefix(d, srcpath) {
+				log.Printf("Self-dependency %s -> %s", relpath, d)
+				continue
+			}
+			if _, ok := stdLib[d]; ok {
+				continue
+			}
+			depends[d] = struct{}{}
+		}
+		for _, d := range pkg.TestImports {
+			if strings.HasPrefix(d, srcpath) {
+				log.Printf("Self test dependency %s -> %s", relpath, d)
+				continue
+			}
+			if _, ok := stdLib[d]; ok {
+				continue
+			}
+			if _, ok := depends[d]; ok {
+				continue
+			}
+			testDepends[d] = struct{}{}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Depends of %s:\n", srcpath)
+	printImports(depends)
+	fmt.Println("Extra Test Depends:")
+	printImports(testDepends)
+	return nil
+}
+
+func printImports(imports map[string]struct{}) {
+	for imp := range imports {
+		if _, ok := stdLib[imp]; !ok {
+			fmt.Printf(" - %s\n", imp)
 		}
 	}
-	return repos, nil
 }

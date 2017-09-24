@@ -80,6 +80,6 @@ func HandleURL(r ReverseIndex, srcpath string) error {
 		log.Printf("%s is already part of a pkgsrc package (%s)", srcpath, pkg)
 		return nil
 	}
-	log.Printf("This is where we would package %s", srcpath)
+	ShowImportsRecursive(srcpath)
 	return nil
 }
