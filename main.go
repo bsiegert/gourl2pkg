@@ -50,7 +50,7 @@ func main() {
 		tmpdir    string
 	)
 	if !*local {
-		tmpdir, err := ioutil.TempDir("", "gourl2pkg")
+		tmpdir, err = ioutil.TempDir("", "gourl2pkg")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -80,6 +80,5 @@ func HandleURL(basedir string, srcpath string) error {
 		log.Printf("%s is already part of a pkgsrc package (%s)", srcpath, pkg)
 		return nil
 	}
-	ShowImportsRecursive(basedir, srcpath)
-	return nil
+	return ShowImportsRecursive(basedir, srcpath)
 }

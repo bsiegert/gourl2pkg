@@ -71,14 +71,13 @@ func ShowImportsRecursive(gopath, srcpath string) error {
 		}
 		pkg, _ := ctx.Import(relpath, "", 0)
 		for _, d := range pkg.Imports {
-			// Self-dependencies don't count;
-			if skipImport(d, srcpath) {
+			if skipImport(d, basedir, srcpath) {
 				continue
 			}
 			depends[d] = struct{}{}
 		}
 		for _, d := range pkg.TestImports {
-			if skipImport(d, srcpath) {
+			if skipImport(d, basedir, srcpath) {
 				continue
 			}
 			if _, ok := depends[d]; ok {
@@ -98,14 +97,26 @@ func ShowImportsRecursive(gopath, srcpath string) error {
 	return nil
 }
 
-func skipImport(dep, srcpath string) bool {
+func skipImport(dep, basedir, srcpath string) bool {
+	// Depends on another package from the same base.
 	if strings.HasPrefix(dep, srcpath) {
-		// log.Printf("Self test dependency %s -> %s", relpath, d)
+		// log.Printf("Self dependency %s -> %s", relpath, d)
 		return true
 	}
+	// Depends on a package in the standard library.
 	if _, ok := stdLib[dep]; ok {
 		return true
 	}
+	// Vendored dependency.
+	for srcpath != "." {
+		vendor := filepath.Join(basedir, srcpath, "vendor", dep)
+		if _, err := os.Stat(vendor); err == nil {
+			// log.Printf("Dependency on vendored package %s", vendor)
+			return true
+		}
+		srcpath = filepath.Dir(srcpath)
+	}
+	// cgo.
 	return dep == "C"
 }
 

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 )
@@ -26,9 +27,9 @@ func GoGet(srcpaths []string, dir string) ([]string, error) {
 	// Read through the output to find download lines.
 	var repos []string
 	for _, line := range bytes.Split(output, []byte{'\n'}) {
-		//fmt.Printf("%s\n", line)
 		if n := bytes.Index(line, []byte(" (download)")); n != -1 {
 			repos = append(repos, string(line[:n]))
+			log.Printf("%s", line)
 		}
 	}
 	return repos, nil
@@ -47,6 +48,7 @@ func GoGetResolve(srcpaths []string, dir string) ([]string, error) {
 		if len(srcpaths) == 0 {
 			break
 		}
+		log.Println(srcpaths)
 		ToPackage = append(ToPackage, srcpaths...)
 	}
 	return ToPackage, nil
