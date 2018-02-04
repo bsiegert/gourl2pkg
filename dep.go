@@ -116,6 +116,11 @@ func skipImport(dep, basedir, srcpath string) bool {
 		}
 		srcpath = filepath.Dir(srcpath)
 	}
+	// Unresolved dependency.
+	if _, ok := revIndex.PrefixMatch(srcpath); !ok {
+                fmt.Printf("%s (UNRESOLVED)\n", srcpath)
+                return true
+	}
 	// cgo.
 	return dep == "C"
 }
