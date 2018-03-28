@@ -35,6 +35,7 @@ var (
 	verbose   = flag.Bool("v", true, "Print verbose messages about what is happening.")
 	pkgsrcdir = flag.String("pkgsrc", "", "Path to the top-level pkgsrc directory, will be taken from the PKGSRCDIR environment variable if not given.")
 	local     = flag.Bool("local", false, "Use local GOPATH (mainly useful for testing)")
+	force     = flag.Bool("force", false, "If true, do not skip packages on the command line that are already in pkgsrc.")
 )
 
 func init() {
@@ -57,8 +58,8 @@ func main() {
 
 	var err error
 	if _, err = os.Stat(*pkgsrcdir); err != nil {
-	        log.Fatalf("There is a problem with the pkgsrc directory (%v).\n"+
-	                "Please set the '-pkgsrc' option.", err)
+		log.Fatalf("There is a problem with the pkgsrc directory (%v).\n"+
+			"Please set the '-pkgsrc' option.", err)
 	}
 	revIndex, err = FullScan(*pkgsrcdir)
 	if err != nil {
@@ -102,7 +103,10 @@ func main() {
 func HandleURL(basedir string, srcpath string) error {
 	if pkg, ok := revIndex.PrefixMatch(srcpath); ok {
 		log.Printf("%s is already part of a pkgsrc package (%s)", srcpath, pkg)
-		return nil
+		// TODO(bsiegert) some kind of upgrade flow
+		if !*force {
+			return nil
+		}
 	}
 	return ShowImportsRecursive(basedir, srcpath)
 }
