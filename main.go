@@ -56,6 +56,10 @@ func main() {
 	}
 
 	var err error
+	if _, err = os.Stat(*pkgsrcdir); err != nil {
+	        log.Fatalf("There is a problem with the pkgsrc directory (%v).\n"+
+	                "Please set the '-pkgsrc' option.", err)
+	}
 	revIndex, err = FullScan(*pkgsrcdir)
 	if err != nil {
 		log.Fatal(err)
