@@ -120,7 +120,7 @@ func ShowImportsRecursive(gopath, srcpath string) error {
 func skipImport(dep, basedir, srcpath string) bool {
 	// Depends on another package from the same base.
 	if strings.HasPrefix(dep, srcpath) {
-		// log.Printf("Self dependency %s -> %s", relpath, d)
+		//log.Printf("Self dependency %s -> %s", srcpath, dep)
 		return true
 	}
 	// Depends on a package in the standard library.
@@ -137,8 +137,8 @@ func skipImport(dep, basedir, srcpath string) bool {
 		srcpath = filepath.Dir(srcpath)
 	}
 	// Unresolved dependency.
-	if _, ok := revIndex.PrefixMatch(srcpath); !ok {
-		fmt.Printf("%s (UNRESOLVED)\n", srcpath)
+	if _, ok := revIndex.PrefixMatch(dep); !ok {
+		fmt.Printf("%s (UNRESOLVED)\n", dep)
 		return true
 	}
 	// cgo.
