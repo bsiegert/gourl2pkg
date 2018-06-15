@@ -68,8 +68,10 @@ func (p PkgMeta) CreatePackage(pkgsrcdir string) error {
 
 	m := filepath.Join(dir, "Makefile")
 	c, err := p.MakefileContents()
-	if err != nil { return err }
-        os.Rename(m, m+".old") // Ignore errors
+	if err != nil {
+		return err
+	}
+	os.Rename(m, m+".old") // Ignore errors
 	return touch(dir, "Makefile", c)
 }
 
