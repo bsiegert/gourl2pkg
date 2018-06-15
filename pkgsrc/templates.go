@@ -25,7 +25,7 @@ import "text/template"
 const makefileTemplate = `# $NetBSD$
 
 DISTNAME=               {{.Distname}}
-CATEGORIES=             {{for range .Categories}}{{.}} {{end}}
+CATEGORIES=             {{range .Categories}}{{.}} {{end}}
 MASTER_SITES=           {{.MasterSites}}
 #GITHUB_PROJECT=
 #GITHUB_TAG=
