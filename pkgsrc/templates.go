@@ -41,7 +41,8 @@ GO_SRCPATH=             {{.GoSrcpath}}
 
 CHECK_RELRO_SKIP+=      # TODO: add any binaries here
 
-{{.AllDependencies}}
+{{.Dependencies}}
+{{.TestDependencies}}
 .include "../../lang/go/go-package.mk"
 .include "../../mk/bsd.pkg.mk"
 `

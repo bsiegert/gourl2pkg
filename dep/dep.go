@@ -18,7 +18,7 @@
  * of said person's immediate fault when using the work as intended.
  */
 
-package main
+package dep
 
 import (
 	"bufio"
@@ -28,7 +28,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
+
+	"github.com/bsiegert/gourl2pkg/pkgsrc"
 )
 
 var stdLib = stdLibPackages()
@@ -60,9 +63,13 @@ func stdLibPackages() map[string]struct{} {
 	return pkgs
 }
 
-// ShowImportsRecursive prints dependencies for srcpath and every one of
-// its subdirectories.
-func ShowImportsRecursive(gopath, srcpath string) error {
+type prefixMatcher interface {
+	PrefixMatch(string) (string, bool)
+}
+
+// FindImportsRecursive finds dependencies for srcpath and every one of
+// its subdirectories and stores them in meta.
+func FindImportsRecursive(gopath string, revIndex prefixMatcher, meta *pkgsrc.PkgMeta) error {
 	ctx := build.Default
 	if gopath != "" {
 		ctx.GOPATH = gopath
@@ -70,6 +77,7 @@ func ShowImportsRecursive(gopath, srcpath string) error {
 	basedir := filepath.Join(filepath.SplitList(ctx.GOPATH)[0], "src")
 	depends := make(map[string]struct{})
 	testDepends := make(map[string]struct{})
+	srcpath := meta.GoSrcpath
 
 	err := filepath.Walk(filepath.Join(basedir, srcpath), func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -91,13 +99,13 @@ func ShowImportsRecursive(gopath, srcpath string) error {
 		}
 		pkg, _ := ctx.Import(relpath, "", 0)
 		for _, d := range pkg.Imports {
-			if skipImport(d, basedir, srcpath) {
+			if skipImport(d, revIndex, basedir, srcpath) {
 				continue
 			}
 			depends[d] = struct{}{}
 		}
 		for _, d := range pkg.TestImports {
-			if skipImport(d, basedir, srcpath) {
+			if skipImport(d, revIndex, basedir, srcpath) {
 				continue
 			}
 			if _, ok := depends[d]; ok {
@@ -110,14 +118,13 @@ func ShowImportsRecursive(gopath, srcpath string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Depends of %s:\n", srcpath)
-	printImports(depends)
-	fmt.Println("Extra Test Depends:")
-	printImports(testDepends)
+
+	meta.Dependencies = pkgsForImports(depends, revIndex)
+	meta.TestDependencies = pkgsForImports(testDepends, revIndex)
 	return nil
 }
 
-func skipImport(dep, basedir, srcpath string) bool {
+func skipImport(dep string, revIndex prefixMatcher, basedir, srcpath string) bool {
 	// Depends on another package from the same base.
 	if strings.HasPrefix(dep, srcpath) {
 		//log.Printf("Self dependency %s -> %s", srcpath, dep)
@@ -145,17 +152,20 @@ func skipImport(dep, basedir, srcpath string) bool {
 	return dep == "C"
 }
 
-func printImports(imports map[string]struct{}) {
+func pkgsForImports(imports map[string]struct{}, revIndex prefixMatcher) []string {
 	pkgs := make(map[string]struct{})
 	for imp := range imports {
 		pkg, ok := revIndex.PrefixMatch(imp)
 		if !ok {
-			fmt.Printf("%s (UNRESOLVED)\n", imp)
+			fmt.Printf("Unresolved dependency: %s\n", imp)
 			continue
 		}
 		pkgs[pkg] = struct{}{}
 	}
+	pkgList := []string{}
 	for pkg := range pkgs {
-		fmt.Println(pkg)
+		pkgList = append(pkgList, pkg)
 	}
+	sort.Strings(pkgList)
+	return pkgList
 }

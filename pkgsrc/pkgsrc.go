@@ -44,8 +44,8 @@ type PkgMeta struct {
 	MasterSites string
 	// The top-level source path of the package.
 	GoSrcpath string
-	// List of all dependencies (test and non-test).
-	AllDependencies []string
+	// List of non-test dependencies.
+	Dependencies []string
 	// List of test-only dependencies.
 	TestDependencies []string
 }

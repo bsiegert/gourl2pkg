@@ -23,9 +23,13 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
+
+	"github.com/bsiegert/gourl2pkg/dep"
+	"github.com/bsiegert/gourl2pkg/pkgsrc"
 )
 
 var InfoLog = log.New(ioutil.Discard, "", log.LstdFlags)
@@ -108,5 +112,9 @@ func HandleURL(basedir string, srcpath string) error {
 			return nil
 		}
 	}
-	return ShowImportsRecursive(basedir, srcpath)
+
+	meta := pkgsrc.PkgMeta{GoSrcpath: srcpath}
+	dep.FindImportsRecursive(basedir, revIndex, &meta)
+	fmt.Println(meta) // Placeholder
+	return nil
 }
