@@ -74,7 +74,9 @@ func main() {
 		ToPackage []string
 		tmpdir    string
 	)
-	if !*local {
+	if *local {
+		ToPackage = flag.Args()
+	} else {
 		tmpdir, err = ioutil.TempDir("", "gourl2pkg")
 		if err != nil {
 			log.Fatal(err)
@@ -85,8 +87,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-	} else {
-		ToPackage = flag.Args()
 	}
 
 	for len(ToPackage) > 0 {
