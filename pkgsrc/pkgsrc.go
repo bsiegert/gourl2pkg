@@ -50,12 +50,15 @@ type PkgMeta struct {
 	TestDependencies []string
 }
 
+//MakefileContents returns the contents of the new package Makefile.
 func (p PkgMeta) MakefileContents() ([]byte, error) {
 	var b bytes.Buffer
 	err := makefileTmpl.Execute(&b, p)
 	return b.Bytes(), err
 }
 
+// CreatePackage creates the files for a pkgsrc package based on the
+// information in p.
 func (p PkgMeta) CreatePackage(pkgsrcdir string) error {
 	dir := filepath.Join(pkgsrcdir, p.Path)
 	err := os.Mkdir(dir, 0777)
