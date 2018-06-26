@@ -117,6 +117,7 @@ func HandleURL(basedir string, srcpath string) error {
 
 	meta := pkgsrc.PkgMeta{GoSrcpath: srcpath}
 	dep.FindImportsRecursive(basedir, revIndex, &meta)
+	meta.InteractiveSetup()
 	fmt.Println(meta) // Placeholder
 	return nil
 }
