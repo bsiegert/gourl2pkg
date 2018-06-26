@@ -35,22 +35,18 @@ import (
 var InfoLog = log.New(ioutil.Discard, "", log.LstdFlags)
 
 var (
-	index     = flag.Bool("index", false, "Print the reverse index of Go packages instead of adding any ports.")
-	verbose   = flag.Bool("v", true, "Print verbose messages about what is happening.")
-	pkgsrcdir = flag.String("pkgsrc", "", "Path to the top-level pkgsrc directory, will be taken from the PKGSRCDIR environment variable if not given.")
-	local     = flag.Bool("local", false, "Use local GOPATH (mainly useful for testing)")
-	force     = flag.Bool("force", false, "If true, do not skip packages on the command line that are already in pkgsrc.")
+	index   = flag.Bool("index", false, "Print the reverse index of Go packages instead of adding any ports.")
+	verbose = flag.Bool("v", true, "Print verbose messages about what is happening.")
+	local   = flag.Bool("local", false, "Use local GOPATH (mainly useful for testing)")
+	force   = flag.Bool("force", false, "If true, do not skip packages on the command line that are already in pkgsrc.")
 )
 
 func init() {
+	flag.StringVar(&pkgsrc.Dir, "pkgsrc", "",
+		"Path to the top-level pkgsrc directory, will be taken from the PKGSRCDIR environment variable if not given.")
+
 	if *verbose {
 		InfoLog = log.New(os.Stderr, "", log.LstdFlags)
-	}
-	if *pkgsrcdir == "" {
-		*pkgsrcdir = os.Getenv("PKGSRC")
-	}
-	if *pkgsrcdir == "" {
-		*pkgsrcdir = "/usr/pkgsrc"
 	}
 }
 
@@ -61,11 +57,17 @@ func main() {
 	}
 
 	var err error
-	if _, err = os.Stat(*pkgsrcdir); err != nil {
+	if pkgsrc.Dir == "" {
+		pkgsrc.Dir = os.Getenv("PKGSRC")
+	}
+	if pkgsrc.Dir == "" {
+		pkgsrc.Dir = "/usr/pkgsrc"
+	}
+	if _, err = os.Stat(pkgsrc.Dir); err != nil {
 		log.Fatalf("There is a problem with the pkgsrc directory (%v).\n"+
 			"Please set the '-pkgsrc' option.", err)
 	}
-	revIndex, err = FullScan(*pkgsrcdir)
+	revIndex, err = FullScan(pkgsrc.Dir)
 	if err != nil {
 		log.Fatal(err)
 	}

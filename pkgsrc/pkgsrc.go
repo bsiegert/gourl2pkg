@@ -28,6 +28,9 @@ import (
 	"path/filepath"
 )
 
+// The top-level pkgsrc directory.
+var Dir string
+
 // TODO(bsiegert) use PkgMeta in scan.go.
 
 // PkgMeta is the metadata for a pkgsrc package.
@@ -51,7 +54,7 @@ type PkgMeta struct {
 }
 
 //MakefileContents returns the contents of the new package Makefile.
-func (p PkgMeta) MakefileContents() ([]byte, error) {
+func (p *PkgMeta) MakefileContents() ([]byte, error) {
 	var b bytes.Buffer
 	err := makefileTmpl.Execute(&b, p)
 	return b.Bytes(), err
@@ -59,8 +62,8 @@ func (p PkgMeta) MakefileContents() ([]byte, error) {
 
 // CreatePackage creates the files for a pkgsrc package based on the
 // information in p.
-func (p PkgMeta) CreatePackage(pkgsrcdir string) error {
-	dir := filepath.Join(pkgsrcdir, p.Path)
+func (p *PkgMeta) CreatePackage() error {
+	dir := filepath.Join(Dir, p.Path)
 	err := os.Mkdir(dir, 0777)
 	if err != nil && !os.IsExist(err) {
 		return err
