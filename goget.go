@@ -62,7 +62,8 @@ func GoGetResolve(srcpaths []string, dir string) ([]string, error) {
 	for i := 1; ; i++ {
 		InfoLog.Printf("Run %d", i)
 		srcpaths, err = GoGet(srcpaths, dir)
-		if err != nil {
+		// Ignore errors from the go tool on subsequent runs.
+		if err != nil && i == 1 {
 			return nil, err
 		}
 		if len(srcpaths) == 0 {
